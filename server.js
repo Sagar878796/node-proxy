@@ -5,13 +5,18 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// Home
+
+
+// HOME ROUTE
 app.get("/", (req, res) => {
   res.send("Proxy running OK");
 });
 
-// Playlist proxy
+
+
+// PLAYLIST PROXY
 app.get("/playlist", async (req, res) => {
+
   try {
 
     const playlistUrl =
@@ -26,7 +31,10 @@ app.get("/playlist", async (req, res) => {
     const text = await response.text();
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.apple.mpegurl"
+    );
 
     res.send(text);
 
@@ -36,9 +44,12 @@ app.get("/playlist", async (req, res) => {
     res.status(500).send("Playlist error");
 
   }
+
 });
 
-// Stream proxy
+
+
+// STREAM PROXY
 app.get("/proxy", async (req, res) => {
 
   try {
@@ -52,10 +63,16 @@ app.get("/proxy", async (req, res) => {
     const response = await fetch(streamUrl, {
 
       headers: {
+
         "User-Agent":
           "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36",
-        "Referer": "https://www.hotstar.com/",
-        "Origin": "https://www.hotstar.com"
+
+        "Referer":
+          "https://www.hotstar.com/",
+
+        "Origin":
+          "https://www.hotstar.com"
+
       }
 
     });
@@ -64,14 +81,18 @@ app.get("/proxy", async (req, res) => {
       return res.status(500).send("Stream fetch failed");
     }
 
+
     const contentType =
       response.headers.get("content-type") ||
       "application/vnd.apple.mpegurl";
 
+
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", contentType);
 
-    // Rewrite m3u8 playlist
+
+
+    // IF M3U8 PLAYLIST
     if (contentType.includes("mpegurl")) {
 
       let text = await response.text();
@@ -82,27 +103,47 @@ app.get("/proxy", async (req, res) => {
           streamUrl.lastIndexOf("/") + 1
         );
 
+      const host =
+        req.protocol + "://" + req.get("host");
+
+
       text = text.replace(
         /^([^#][^\n]*)$/gm,
         (line) => {
 
-          if (line.startsWith("http")) {
-            return `/proxy?url=${encodeURIComponent(line)}`;
+          if (line.trim() === "") {
+            return line;
           }
 
-          return `/proxy?url=${encodeURIComponent(base + line)}`;
+          if (line.startsWith("http")) {
+
+            return host +
+              "/proxy?url=" +
+              encodeURIComponent(line);
+
+          }
+
+          return host +
+            "/proxy?url=" +
+            encodeURIComponent(base + line);
 
         }
       );
 
       res.send(text);
 
-    } else {
+    }
+
+
+    // IF VIDEO SEGMENT (.ts)
+    else {
 
       const buffer = await response.buffer();
+
       res.send(buffer);
 
     }
+
 
   } catch (err) {
 
@@ -113,7 +154,13 @@ app.get("/proxy", async (req, res) => {
 
 });
 
-// Start server
+
+
+// START SERVER
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+
+  console.log(
+    "Server running on port " + PORT
+  );
+
 });
