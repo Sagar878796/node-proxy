@@ -2,11 +2,10 @@ const express = require("express");
 const fetch = require("node-fetch");
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
 
-// Home route
+// Home
 app.get("/", (req, res) => {
   res.send("Proxy running");
 });
@@ -17,42 +16,38 @@ app.get("/playlist", async (req, res) => {
 
   try {
 
-    const response = await fetch(
-      "https://raw.githubusercontent.com/Sagar878796/Stvlive/main/playlist.m3u"
-    );
+    const url =
+      "https://raw.githubusercontent.com/Sagar878796/Stvlive/main/playlist.m3u";
 
+    const response = await fetch(url);
     const text = await response.text();
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.apple.mpegurl"
-    );
+    res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
 
     res.send(text);
 
   } catch {
 
-    res.status(500).send("Playlist error");
+    res.send("Playlist error");
 
   }
 
 });
 
 
-// Stream proxy
+// Stream proxy with rewrite
 app.get("/proxy", async (req, res) => {
 
   try {
 
-    const streamUrl = req.query.url;
+    const url = req.query.url;
 
-    if (!streamUrl) {
-      return res.status(400).send("Missing URL");
+    if (!url) {
+      return res.send("Missing URL");
     }
 
-    const response = await fetch(streamUrl, {
+    const response = await fetch(url, {
 
       headers: {
 
@@ -67,30 +62,56 @@ app.get("/proxy", async (req, res) => {
 
     });
 
-    const buffer = await response.buffer();
+    const contentType = response.headers.get("content-type");
 
     res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", contentType);
 
-    res.setHeader(
-      "Content-Type",
-      response.headers.get("content-type") ||
-      "application/vnd.apple.mpegurl"
-    );
 
-    res.send(buffer);
+    // If m3u8 playlist → rewrite URLs
+    if (contentType.includes("mpegurl")) {
+
+      let text = await response.text();
+
+      const base = url.substring(0, url.lastIndexOf("/") + 1);
+
+      text = text.replace(
+        /^([^#][^\n]*)$/gm,
+        (line) => {
+
+          if (line.startsWith("http")) {
+
+            return `/proxy?url=${encodeURIComponent(line)}`;
+
+          } else {
+
+            return `/proxy?url=${encodeURIComponent(base + line)}`;
+
+          }
+
+        }
+      );
+
+      res.send(text);
+
+    } else {
+
+      // send video segment
+      const buffer = await response.buffer();
+      res.send(buffer);
+
+    }
 
   } catch (err) {
 
     console.log(err);
-
-    res.status(500).send("Proxy error");
+    res.send("Proxy error");
 
   }
 
 });
 
 
-// Start server
 app.listen(PORT, () => {
 
   console.log("Server running on port " + PORT);
