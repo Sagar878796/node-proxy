@@ -16,10 +16,11 @@ app.get("/playlist", async (req, res) => {
 
   try {
 
-    const url =
+    const playlistUrl =
       "https://raw.githubusercontent.com/Sagar878796/Stvlive/main/playlist.m3u";
 
-    const response = await fetch(url);
+    const response = await fetch(playlistUrl);
+
     const text = await response.text();
 
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -27,9 +28,9 @@ app.get("/playlist", async (req, res) => {
 
     res.send(text);
 
-  } catch {
+  } catch (err) {
 
-    res.send("Playlist error");
+    res.status(500).send("Playlist error");
 
   }
 
@@ -41,13 +42,13 @@ app.get("/proxy", async (req, res) => {
 
   try {
 
-    const url = req.query.url;
+    const streamUrl = req.query.url;
 
-    if (!url) {
-      return res.send("Missing URL");
+    if (!streamUrl) {
+      return res.status(400).send("Missing URL");
     }
 
-    const response = await fetch(url, {
+    const response = await fetch(streamUrl, {
 
       headers: {
 
@@ -62,22 +63,28 @@ app.get("/proxy", async (req, res) => {
 
     });
 
-    const contentType = response.headers.get("content-type");
+    const contentType =
+      response.headers.get("content-type") ||
+      "application/vnd.apple.mpegurl";
 
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", contentType);
 
 
-    // If m3u8 playlist → rewrite URLs
+    // rewrite playlist
     if (contentType.includes("mpegurl")) {
 
       let text = await response.text();
 
-      const base = url.substring(0, url.lastIndexOf("/") + 1);
+      const base =
+        streamUrl.substring(
+          0,
+          streamUrl.lastIndexOf("/") + 1
+        );
 
       text = text.replace(
         /^([^#][^\n]*)$/gm,
-        (line) => {
+        line => {
 
           if (line.startsWith("http")) {
 
@@ -96,8 +103,8 @@ app.get("/proxy", async (req, res) => {
 
     } else {
 
-      // send video segment
       const buffer = await response.buffer();
+
       res.send(buffer);
 
     }
@@ -105,7 +112,8 @@ app.get("/proxy", async (req, res) => {
   } catch (err) {
 
     console.log(err);
-    res.send("Proxy error");
+
+    res.status(500).send("Proxy error");
 
   }
 
