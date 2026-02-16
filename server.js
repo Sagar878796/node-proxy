@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 
 
 
-// HOME ROUTE
+// HOME
 app.get("/", (req, res) => {
   res.send("Proxy running OK");
 });
@@ -24,9 +24,8 @@ app.get("/playlist", async (req, res) => {
 
     const response = await fetch(playlistUrl);
 
-    if (!response.ok) {
-      return res.status(500).send("Failed to fetch playlist");
-    }
+    if (!response.ok)
+      return res.status(500).send("Playlist fetch failed");
 
     const text = await response.text();
 
@@ -57,9 +56,9 @@ app.get("/proxy", async (req, res) => {
 
     const streamUrl = req.query.url;
 
-    if (!streamUrl) {
+    if (!streamUrl)
       return res.status(400).send("Missing URL");
-    }
+
 
 
     const response = await fetch(streamUrl, {
@@ -80,9 +79,10 @@ app.get("/proxy", async (req, res) => {
     });
 
 
-    if (!response.ok) {
+
+    if (!response.ok)
       return res.status(500).send("Stream fetch failed");
-    }
+
 
 
     const contentType =
@@ -90,12 +90,13 @@ app.get("/proxy", async (req, res) => {
       "application/vnd.apple.mpegurl";
 
 
+
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", contentType);
 
 
 
-    // IF M3U8 PLAYLIST
+    // IF PLAYLIST (.m3u8)
     if (contentType.includes("mpegurl")) {
 
       let text = await response.text();
@@ -108,6 +109,7 @@ app.get("/proxy", async (req, res) => {
 
       const host =
         req.protocol + "://" + req.get("host");
+
 
 
       text = text.replace(
@@ -132,19 +134,23 @@ app.get("/proxy", async (req, res) => {
       );
 
 
+
       res.send(text);
 
     }
 
 
+
     // VIDEO SEGMENT (.ts)
     else {
 
-      const buffer = await response.buffer();
+      const buffer =
+        await response.buffer();
 
       res.send(buffer);
 
     }
+
 
 
   }
@@ -162,6 +168,8 @@ app.get("/proxy", async (req, res) => {
 // START SERVER
 app.listen(PORT, () => {
 
-  console.log("Server running on port " + PORT);
+  console.log(
+    "Server running on port " + PORT
+  );
 
 });
