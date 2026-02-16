@@ -38,7 +38,8 @@ app.get("/playlist", async (req, res) => {
 
     res.send(text);
 
-  } catch (err) {
+  }
+  catch (err) {
 
     console.log(err);
     res.status(500).send("Playlist error");
@@ -60,6 +61,7 @@ app.get("/proxy", async (req, res) => {
       return res.status(400).send("Missing URL");
     }
 
+
     const response = await fetch(streamUrl, {
 
       headers: {
@@ -76,6 +78,7 @@ app.get("/proxy", async (req, res) => {
       }
 
     });
+
 
     if (!response.ok) {
       return res.status(500).send("Stream fetch failed");
@@ -111,9 +114,7 @@ app.get("/proxy", async (req, res) => {
         /^([^#][^\n]*)$/gm,
         (line) => {
 
-          if (line.trim() === "") {
-            return line;
-          }
+          if (!line.trim()) return line;
 
           if (line.startsWith("http")) {
 
@@ -130,12 +131,13 @@ app.get("/proxy", async (req, res) => {
         }
       );
 
+
       res.send(text);
 
     }
 
 
-    // IF VIDEO SEGMENT (.ts)
+    // VIDEO SEGMENT (.ts)
     else {
 
       const buffer = await response.buffer();
@@ -145,7 +147,8 @@ app.get("/proxy", async (req, res) => {
     }
 
 
-  } catch (err) {
+  }
+  catch (err) {
 
     console.log(err);
     res.status(500).send("Proxy error");
@@ -159,8 +162,6 @@ app.get("/proxy", async (req, res) => {
 // START SERVER
 app.listen(PORT, () => {
 
-  console.log(
-    "Server running on port " + PORT
-  );
+  console.log("Server running on port " + PORT);
 
 });
